@@ -3,7 +3,7 @@ import itertools
 
 listr = []
 listh = []
-scores = []
+totalScore = 0
 verbose = False
 
 def readwords(file_object):
@@ -69,19 +69,19 @@ def myDiffHelper (startBoundR, startBoundH, endBoundR, endBoundH):
 	if (verbose):
 		print "  [ R ] " + r_temp
 		print "  [ H ] " + h_temp + "\n"
-	scores.append(levenshtein(r_temp[:-1], h_temp[:-1]))
+	global totalScore
+	totalScore += levenshtein(r_temp[:-1], h_temp[:-1])
 
 def myDiff(r, h):
 	lenFileR = -1
 	anchors = []
-	totalScore = 0
 
 	with open(r, 'r') as f:
 		for w in readwords(f):
-			listr.append(str(w).rstrip('\0'))
+			listr.append(str(w).replace('\x00', ''))
 	with open(h, 'r') as f:
 		for w in readwords(f):
-			listh.append(str(w).rstrip('\0'))
+			listh.append(str(w).replace('\x00', ''))
 
 	for w in listr:
 		lenFileR += len(w) + 1
@@ -98,47 +98,42 @@ def myDiff(r, h):
 	#IF NOT ANCHORS
 	if (len(anchors) == 0):
 		myDiffHelper(0, 0, len(listr), len(listh))
+	else:
+		#BEFORE FIRST ANCHOR
+		firstAnchorInR = listr.index(anchors[0])
+		firstAnchorInH = listh.index(anchors[0])
 
-	#BEFORE FIRST ANCHOR
-	firstAnchorInR = listr.index(anchors[0])
-	firstAnchorInH = listh.index(anchors[0])
-
-	myDiffHelper(0, 0, firstAnchorInR, firstAnchorInH)
-
-	for i, _ in enumerate(listr):
-		if(i<firstAnchorInR):
-			listr[i] = None
-	for i, _ in enumerate(listh):
-		if(i<firstAnchorInH):
-			listh[i] = None
-
-	#ANCHORS
-	for anchorIndex in range(len(anchors)-1):
-		r1 = listr.index(anchors[anchorIndex])
-		r2 = listr.index(anchors[anchorIndex+1])
-		h1 = listh.index(anchors[anchorIndex])
-		h2 = listh.index(anchors[anchorIndex+1])
-
-		if (r2 - r1 > 1 or h2 - h1 > 1):
-			myDiffHelper(r1+1, h1+1, r2, h2)
-		else:
-			scores.append(0)
+		myDiffHelper(0, 0, firstAnchorInR, firstAnchorInH)
 
 		for i, _ in enumerate(listr):
-			if(i>=r1 and i<r2):
+			if(i<firstAnchorInR):
 				listr[i] = None
 		for i, _ in enumerate(listh):
-			if(i>=h1 and i<h2):
+			if(i<firstAnchorInH):
 				listh[i] = None
 
-	#AFTER LAST ANCHOR
-	lastAnchorInR = listr.index(anchors[len(anchors) - 1])
-	lastAnchorInH = listh.index(anchors[len(anchors) - 1])
-	
-	myDiffHelper(lastAnchorInR, lastAnchorInH, len(listr), len(listh))
+		#ANCHORS
+		for anchorIndex in range(len(anchors)-1):
+			r1 = listr.index(anchors[anchorIndex])
+			r2 = listr.index(anchors[anchorIndex+1])
+			h1 = listh.index(anchors[anchorIndex])
+			h2 = listh.index(anchors[anchorIndex+1])
 
-	for s in scores:
-		totalScore += s
+			if (r2 - r1 > 1 or h2 - h1 > 1):
+				myDiffHelper(r1+1, h1+1, r2, h2)
+
+			for i, _ in enumerate(listr):
+				if(i>=r1 and i<r2):
+					listr[i] = None
+			for i, _ in enumerate(listh):
+				if(i>=h1 and i<h2):
+					listh[i] = None
+
+		#AFTER LAST ANCHOR
+		lastAnchorInR = listr.index(anchors[len(anchors) - 1])
+		lastAnchorInH = listh.index(anchors[len(anchors) - 1])
+		
+		myDiffHelper(lastAnchorInR, lastAnchorInH, len(listr), len(listh))
 
 	print "% Anchor:", len(anchors)/float(len(listr))
 	print "% Diff:  ", totalScore/float(lenFileR)
