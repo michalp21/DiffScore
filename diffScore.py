@@ -4,6 +4,7 @@ import itertools
 listr = []
 listh = []
 scores = []
+verbose = False
 
 def readwords(file_object):
     byte_stream = itertools.groupby(
@@ -65,8 +66,9 @@ def myDiffHelper (startBoundR, startBoundH, endBoundR, endBoundH):
 		r_temp += listr[index_r] + " "
 	for index_h in range(startBoundH, endBoundH):
 		h_temp += listh[index_h] + " "
-	print "  [ R ] " + r_temp
-	print "  [ H ] " + h_temp + "\n"
+	if (verbose):
+		print "  [ R ] " + r_temp
+		print "  [ H ] " + h_temp + "\n"
 	scores.append(levenshtein(r_temp[:-1], h_temp[:-1]))
 
 def myDiff(r, h):
@@ -84,12 +86,14 @@ def myDiff(r, h):
 	for w in listr:
 		lenFileR += len(w) + 1
 
-	print "\n Ref words: " + str(listr)
-	print "\n Hyp words: " + str(listh)
+	if (verbose):
+		print "\n Ref words: " + str(listr)
+		print "\n Hyp words: " + str(listh)
  
  	#find a longest common substring
 	anchors = backTrack(LCS(listr, listh), listr, listh, len(listr), len(listh)).split()
-	print "\n Anchors: " + str(anchors) + "\n"
+	if(verbose):
+		print "\n Anchors: " + str(anchors) + "\n"
 
 	#IF NOT ANCHORS
 	if (len(anchors) == 0):
@@ -144,9 +148,9 @@ def main(argv):
 	hypfile = ''
 	reffile = ''
 	try:
-		opts, args = getopt.getopt(argv,"h:r:",["hfile=","rfile="])
+		opts, args = getopt.getopt(argv,"vh:r:")
 	except getopt.GetoptError:
-		print 'test.py -r <ref file> -h <hyp file>'
+		print 'Requires: -r <ref file> -h <hyp file>'
 		sys.exit(2)
 	for opt, arg in opts:
 		if opt in ("-h", "--hfile"):
@@ -159,9 +163,12 @@ def main(argv):
 				print 'txt file required'
 				sys.exit(2)
 			reffile = arg
+		if opt in ("-v", "--verbose"):
+			global verbose
+			verbose = True
 
-	print 'Hypothesis file is "', hypfile
-	print 'Reference file is "', reffile
+
+	print '"' + reffile + '" <-- "' + hypfile + '"'
 
 	myDiff(reffile, hypfile)
 
