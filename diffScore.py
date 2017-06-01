@@ -78,10 +78,10 @@ def myDiff(r, h):
 
 	with open(r, 'r') as f:
 		for w in readwords(f):
-			listr.append(str(w))
+			listr.append(str(w).rstrip('\0'))
 	with open(h, 'r') as f:
 		for w in readwords(f):
-			listh.append(str(w))
+			listh.append(str(w).rstrip('\0'))
 
 	for w in listr:
 		lenFileR += len(w) + 1
