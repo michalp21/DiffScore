@@ -146,7 +146,7 @@ def main(argv):
 	try:
 		opts, args = getopt.getopt(argv,"h:r:",["hfile=","rfile="])
 	except getopt.GetoptError:
-		print 'test.py -i <inputfile> -o <outputfile>'
+		print 'test.py -r <ref file> -h <hyp file>'
 		sys.exit(2)
 	for opt, arg in opts:
 		if opt in ("-h", "--hfile"):
@@ -163,7 +163,7 @@ def main(argv):
 	print 'Hypothesis file is "', hypfile
 	print 'Reference file is "', reffile
 
-	myDiff(hypfile, reffile)
+	myDiff(reffile, hypfile)
 
 if __name__ == "__main__":
 	main(sys.argv[1:])
