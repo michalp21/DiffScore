@@ -1,62 +1,65 @@
 import sys, getopt
 import itertools
+import os
 
 listr = []
 listh = []
 totalScore = 0
-verbose = False
+isVerbose = False
+csvMode = True
+NUMDOCUMENTS = 29	#Number of pdfs
 
 def readwords(file_object):
-    byte_stream = itertools.groupby(
-    	itertools.takewhile(lambda c: bool(c),
-    		itertools.imap(file_object.read,
-    			itertools.repeat(1))), str.isspace)
+	byte_stream = itertools.groupby(
+		itertools.takewhile(lambda c: bool(c),
+			itertools.imap(file_object.read,
+				itertools.repeat(1))), str.isspace)
 
-    return ("".join(group) for pred, group in byte_stream if not pred)
+	return ("".join(group) for pred, group in byte_stream if not pred)
 
 def levenshtein(s1, s2):
-    if len(s1) < len(s2):
-        return levenshtein(s2, s1)
+	if len(s1) < len(s2):
+		return levenshtein(s2, s1)
 
-    # len(s1) >= len(s2)
-    if len(s2) == 0:
-        return len(s1)
+	# len(s1) >= len(s2)
+	if len(s2) == 0:
+		return len(s1)
 
-    previous_row = range(len(s2) + 1)
-    for i, c1 in enumerate(s1):
-        current_row = [i + 1]
-        for j, c2 in enumerate(s2):
-            insertions = previous_row[j + 1] + 1 # j+1 instead of j since previous_row and current_row are one character longer
-            deletions = current_row[j] + 1       # than s2
-            substitutions = previous_row[j] + (c1 != c2)
-            current_row.append(min(insertions, deletions, substitutions))
-        previous_row = current_row
-    
-    return previous_row[-1]
+	previous_row = range(len(s2) + 1)
+	for i, c1 in enumerate(s1):
+		current_row = [i + 1]
+		for j, c2 in enumerate(s2):
+			insertions = previous_row[j + 1] + 1 # j+1 instead of j since previous_row and current_row are one character longer
+			deletions = current_row[j] + 1       # than s2
+			substitutions = previous_row[j] + (c1 != c2)
+			current_row.append(min(insertions, deletions, substitutions))
+		previous_row = current_row
+	
+	return previous_row[-1]
 
 def lcs(a, b):
-    lengths = [[0 for j in range(len(b)+1)] for i in range(len(a)+1)]
-    # row 0 and column 0 are initialized to 0 already
-    for i, x in enumerate(a):
-        for j, y in enumerate(b):
-            if x == y:
-                lengths[i+1][j+1] = lengths[i][j] + 1
-            else:
-                lengths[i+1][j+1] = max(lengths[i+1][j], lengths[i][j+1])
-    # read the substring out from the matrix
-    result = ""
-    x, y = len(a), len(b)
-    while x != 0 and y != 0:
-        if lengths[x][y] == lengths[x-1][y]:
-            x -= 1
-        elif lengths[x][y] == lengths[x][y-1]:
-            y -= 1
-        else:
-            assert a[x-1] == b[y-1]
-            result = a[x-1] + " " + result
-            x -= 1
-            y -= 1
-    return result
+	lengths = [[0 for j in range(len(b)+1)] for i in range(len(a)+1)]
+	# row 0 and column 0 are initialized to 0 already
+	for i, x in enumerate(a):
+		for j, y in enumerate(b):
+			if x == y:
+				lengths[i+1][j+1] = lengths[i][j] + 1
+			else:
+				lengths[i+1][j+1] = max(lengths[i+1][j], lengths[i][j+1])
+	# read the substring out from the matrix
+	result = ""
+	x, y = len(a), len(b)
+	while x != 0 and y != 0:
+		if lengths[x][y] == lengths[x-1][y]:
+			x -= 1
+		elif lengths[x][y] == lengths[x][y-1]:
+			y -= 1
+		else:
+			assert a[x-1] == b[y-1]
+			result = a[x-1] + " " + result
+			x -= 1
+			y -= 1
+	return result
 
 def myDiffHelper (startBoundR, startBoundH, endBoundR, endBoundH):
 	r_temp = ""
@@ -66,7 +69,7 @@ def myDiffHelper (startBoundR, startBoundH, endBoundR, endBoundH):
 		r_temp += listr[index_r] + " "
 	for index_h in range(startBoundH, endBoundH):
 		h_temp += listh[index_h] + " "
-	if (verbose):
+	if (isVerbose):
 		print "  [ R ] " + r_temp + ""
 		print "  [ H ] " + h_temp + "\n"
 	global totalScore
@@ -90,13 +93,13 @@ def myDiff(r, h):
 	for w in listr:
 		lenFileR += len(w) + 1
 
-	if (verbose):
+	if (isVerbose):
 		print "\n Ref words: " + str(listr)
 		print "\n Hyp words: " + str(listh)
  
- 	#find a longest common substring
+	#find a longest common substring
 	anchors = lcs(listr,listh).split()
-	if(verbose):
+	if(isVerbose):
 		print "\n Anchors: " + str(anchors) + "\n"
 
 	#IF NOT ANCHORS
@@ -139,15 +142,43 @@ def myDiff(r, h):
 		
 		myDiffHelper(lastAnchorInR, lastAnchorInH, len(listr), len(listh))
 
-	print "% Anchor:", len(anchors)/float(len(listr))
-	print "% Diff:  ", totalScore/float(lenFileR)
+	if (not csvMode):
+		print "% Anchor:", len(anchors)/float(len(listr))
+		print "% Diff:  ", totalScore/float(lenFileR)
+	else:
+		csv(len(anchors)/float(len(listr)),totalScore/float(lenFileR))
+
+#requires open, empty csv files with correct names
+def csv(anchor,diff):
+	anchorContent = []
+	with open("anchor.csv", "r+") as ins:
+		anchorContent = ins.read().split(',')[:-1]
+
+	with open("anchor.csv", "a+") as ins:
+		#print str(len(content)) + str(NUMDOCUMENTS)
+		if (len(anchorContent) % NUMDOCUMENTS == 0):
+			ins.write("\n" + str(anchor) + ",")
+		else:
+			ins.write(str(anchor) + ",")
+
+	diffContent = []
+	with open("diff.csv", "r+") as ins:
+		diffContent = ins.read().split(',')[:-1]
+
+	with open("diff.csv", "a+") as ins:
+		#print str(len(content)) + str(NUMDOCUMENTS)
+		if (len(diffContent) % NUMDOCUMENTS == 0):
+			ins.write("\n" + str(diff) + ",")
+		else:
+			ins.write(str(diff) + ",")
+
 
 
 def main(argv):
 	hypfile = ''
 	reffile = ''
 	try:
-		opts, args = getopt.getopt(argv,"vh:r:")
+		opts, args = getopt.getopt(argv,"cvh:r:")
 	except getopt.GetoptError:
 		print 'Requires: -r <ref file> -h <hyp file>'
 		sys.exit(2)
@@ -162,12 +193,16 @@ def main(argv):
 				print 'txt file required'
 				sys.exit(2)
 			reffile = arg
+		#does not ensure that only 1 of the below options is used
 		if opt in ("-v", "--verbose"):
-			global verbose
-			verbose = True
+			global isVerbose
+			isVerbose = True
+		elif opt in ("-c", "--csv"):
+			global csvMode
+			csvMode = True
 
-
-	print '"' + reffile + '" <-- "' + hypfile + '"'
+	if(not csvMode):
+		print '"' + reffile + '" <-- "' + hypfile + '"'
 
 	myDiff(reffile, hypfile)
 
