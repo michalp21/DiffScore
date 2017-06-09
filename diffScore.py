@@ -34,29 +34,29 @@ def levenshtein(s1, s2):
     
     return previous_row[-1]
 
-def LCS(X, Y):
-    m = len(X)
-    n = len(Y)
-    # An (m+1) times (n+1) matrix
-    C = [[0] * (n + 1) for _ in range(m + 1)]
-    for i in range(1, m+1):
-        for j in range(1, n+1):
-            if X[i-1] == Y[j-1]: 
-                C[i][j] = C[i-1][j-1] + 1
+def lcs(a, b):
+    lengths = [[0 for j in range(len(b)+1)] for i in range(len(a)+1)]
+    # row 0 and column 0 are initialized to 0 already
+    for i, x in enumerate(a):
+        for j, y in enumerate(b):
+            if x == y:
+                lengths[i+1][j+1] = lengths[i][j] + 1
             else:
-                C[i][j] = max(C[i][j-1], C[i-1][j])
-    return C
-
-def backTrack(C, X, Y, i, j):
-    if i == 0 or j == 0:
-        return ""
-    elif X[i-1] == Y[j-1]:
-        return backTrack(C, X, Y, i-1, j-1) + " " + X[i-1]
-    else:
-        if C[i][j-1] > C[i-1][j]:
-            return backTrack(C, X, Y, i, j-1)
+                lengths[i+1][j+1] = max(lengths[i+1][j], lengths[i][j+1])
+    # read the substring out from the matrix
+    result = ""
+    x, y = len(a), len(b)
+    while x != 0 and y != 0:
+        if lengths[x][y] == lengths[x-1][y]:
+            x -= 1
+        elif lengths[x][y] == lengths[x][y-1]:
+            y -= 1
         else:
-            return backTrack(C, X, Y, i-1, j)
+            assert a[x-1] == b[y-1]
+            result = a[x-1] + " " + result
+            x -= 1
+            y -= 1
+    return result
 
 def myDiffHelper (startBoundR, startBoundH, endBoundR, endBoundH):
 	r_temp = ""
@@ -67,7 +67,7 @@ def myDiffHelper (startBoundR, startBoundH, endBoundR, endBoundH):
 	for index_h in range(startBoundH, endBoundH):
 		h_temp += listh[index_h] + " "
 	if (verbose):
-		print "  [ R ] " + r_temp
+		print "  [ R ] " + r_temp + ""
 		print "  [ H ] " + h_temp + "\n"
 	global totalScore
 	totalScore += levenshtein(r_temp[:-1], h_temp[:-1])
@@ -78,10 +78,14 @@ def myDiff(r, h):
 
 	with open(r, 'r') as f:
 		for w in readwords(f):
-			listr.append(str(w).replace('\x00', ''))
+			myString = str(w).replace('\x00', '')
+			if (myString != ''):
+				listr.append(myString)
 	with open(h, 'r') as f:
 		for w in readwords(f):
-			listh.append(str(w).replace('\x00', ''))
+			myString = str(w).replace('\x00', '')
+			if (myString != ''):
+				listh.append(myString)
 
 	for w in listr:
 		lenFileR += len(w) + 1
@@ -91,7 +95,7 @@ def myDiff(r, h):
 		print "\n Hyp words: " + str(listh)
  
  	#find a longest common substring
-	anchors = backTrack(LCS(listr, listh), listr, listh, len(listr), len(listh)).split()
+	anchors = lcs(listr,listh).split()
 	if(verbose):
 		print "\n Anchors: " + str(anchors) + "\n"
 
